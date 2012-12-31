@@ -46,20 +46,32 @@ function biblembed_shortcode_handler($atts) {
  *  The quotation.
  */
 function biblembed_get_verse_quote($atts) {
-  $url = sprintf("http://www.biblegateway.com/passage/?search=%s&version=%s", urlencode($atts['verse']), $atts['version']);
-
   $doc = new DOMDocument();
-  $doc->loadHTMLFile($url);
-
-  $xquery = sprintf("//div[contains(normalize-space(@class), 'passage') and contains(normalize-space(@class), 'version-%s')]", $atts['version']);
+  $doc->loadHTMLFile(sprintf("http://www.biblegateway.com/passage/?search=%s&version=%s", urlencode($atts['verse']), $atts['version']));
 
   $xdoc = new DOMXPath($doc);
-  $passages = $xdoc->query($xquery);
+  $passages = $xdoc->query(sprintf("//div[contains(normalize-space(@class), 'passage') and contains(normalize-space(@class), 'version-%s')]", $atts['version']));
 
   $passage = new DOMDocument();
-  $passage->appendChild($passage->importNode($passages->item(0), TRUE));
+  for ($i = 0; $i < $passages->length; $i++) {
+    $passage->appendChild($passage->importNode($passages->item($i), TRUE));
+  }
 
-  return $passage->saveHTML() . "<span>&mdash; " . _(biblembed_get_verse_link($atts) . " &bull; Extracted from BibleGateway.") . "</span>";
+  $output = $passage->saveHTML() . "<span>&mdash; " . _(biblembed_get_verse_link($atts) . " &bull; Extracted from BibleGateway.") . "</span>";
+
+  // Remove footnotes references.
+  $footnotes = $xdoc->query('//div[@class="footnotes"]')->item(0);
+  $footnote = new DOMDocument();
+  $footnote->appendChild($footnote->importNode($footnotes, TRUE));
+  $output = str_ireplace(trim($footnote->saveHTML()), '', trim($output));
+
+  // Remove footnotes.
+  $footnotes = $xdoc->query('//sup[@class="footnote"]')->item(0);
+  $footnote = new DOMDocument();
+  $footnote->appendChild($footnote->importNode($footnotes, TRUE));
+  $output = str_ireplace(trim($footnote->saveHTML()), '', trim($output));
+
+  return $output;
 }
 
 /**
@@ -67,13 +79,27 @@ function biblembed_get_verse_quote($atts) {
  *
  * @param array $atts
  *  Shortcode attributes.
+ * @param bool $show_version
+ *  Whether or not show the Bible version where the verse was taken from.
+ * @param string $anchor_text
+ *  Anchor text to override the default one (=the scripture reference itself).
  * @return string
  *  The link.
  */
-function biblembed_get_verse_link($atts, $anchor_text = NULL) {
+function biblembed_get_verse_link($atts, $show_version = TRUE, $anchor_text = NULL) {
+  if ($anchor_text) {
+    $anchor = $anchor_text;
+  }
+  else {
+    $anchor = $atts['verse'];
+    if ($show_version) {
+      $anchor .= " (" . $atts['version'] . ")";
+    }
+  }
+
   return sprintf('<a href="%s">%s</a>',
     sprintf("http://www.biblegateway.com/passage/?search=%s&version=%s", urlencode($atts['verse']), $atts['version']),
-    $anchor_text ? $anchor_text : $atts['verse']);
+    $anchor);
 }
 
 add_shortcode('bible', 'biblembed_shortcode_handler');
