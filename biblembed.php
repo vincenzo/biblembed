@@ -4,7 +4,7 @@
  * Plugin Name: BiblEmbed
  * Plugin URI: https://github.com/vincenzo/biblembed
  * Description: This Plugin allows to embed Bible passages using Bible Gateway.
- * Version: 0.1
+ * Version: 0.2
  * Author: Vincenzo Russo
  * Author URI: http://neminis.org
  *
@@ -46,31 +46,71 @@ function biblembed_shortcode_handler($atts) {
  *  The quotation.
  */
 function biblembed_get_verse_quote($atts) {
+  // Get current post's ID.
+  $post_id = $GLOBALS['wp_query']->post->ID;
+  // Calculate the MD5 hash for this verse.
+  $meta_hash = md5($atts['verse'] . $atts['version']);
+
+  // If the verse has been previously cached.
+  if ($bibleverse = get_post_meta($post_id, 'bible_' . $meta_hash, TRUE)) {
+    // Get it from the cache.
+    return $bibleverse;
+  }
+
+  // No cache found: query BibleGateway.
   $doc = new DOMDocument();
   $doc->loadHTMLFile(sprintf("http://www.biblegateway.com/passage/?search=%s&version=%s", urlencode($atts['verse']), $atts['version']));
 
+  // XPath query to find the bible verses we asked for.
   $xdoc = new DOMXPath($doc);
   $passages = $xdoc->query(sprintf("//div[contains(normalize-space(@class), 'passage') and contains(normalize-space(@class), 'version-%s')]", $atts['version']));
 
-  $passage = new DOMDocument();
+  // Initialise the output to return.
+  $output = '';
+  // Multiples verses that are meant to be rendered in a separated way are listed is a semicolon separated string.
+  $verses = explode(";", $atts['verse']);
+
+  // Render all the verses found.
   for ($i = 0; $i < $passages->length; $i++) {
+    $passage = new DOMDocument();
     $passage->appendChild($passage->importNode($passages->item($i), TRUE));
+    $output .= "<blockquote>" . $passage->saveHTML();
+    // Multiple verses can be rendered as one block. To check whether that's the case,
+    // we check the number of verses obtained from a potential semicolon separated list with
+    // the length of the list of passages.
+    if (count($verses) == $passages->length) {
+      $atts['verse'] = $verses[$i];
+      $output .= "<br />" . _(biblembed_get_verse_link($atts)) . "</blockquote><hr />" ;
+    }
+    else {
+      if ($passages->length - $i == 1) {
+        $output .= "<br />" . _(biblembed_get_verse_link($atts)) . "</blockquote>";
+      }
+    }
   }
 
-  $output = $passage->saveHTML() . "<span>&mdash; " . _(biblembed_get_verse_link($atts) . " &bull; Extracted from BibleGateway.") . "</span>";
+  // Remove all footnotes references.
+  if (($footnotes = $xdoc->query('//div[@class="footnotes"]')) && ($footnotes->length > 0)) {
+    for ($i = 0; $i < $footnotes->length; $i++) {
+      $footnote = new DOMDocument();
+      $footnote->appendChild($footnote->importNode($footnotes->item($i), TRUE));
+      $output = str_ireplace(trim($footnote->saveHTML()), '', trim($output));
+    }
+  }
 
-  // Remove footnotes references.
-  $footnotes = $xdoc->query('//div[@class="footnotes"]')->item(0);
-  $footnote = new DOMDocument();
-  $footnote->appendChild($footnote->importNode($footnotes, TRUE));
-  $output = str_ireplace(trim($footnote->saveHTML()), '', trim($output));
+  // Remove all footnotes.
+  if (($footnotes = $xdoc->query('//sup[@class="footnote"]')) && ($footnotes->length > 0)) {
+    for ($i = 0; $i < $footnotes->length; $i++) {
+      $footnote = new DOMDocument();
+      $footnote->appendChild($footnote->importNode($footnotes->item($i), TRUE));
+      $output = str_ireplace(trim($footnote->saveHTML()), '', trim($output));
+    }
+  }
 
-  // Remove footnotes.
-  $footnotes = $xdoc->query('//sup[@class="footnote"]')->item(0);
-  $footnote = new DOMDocument();
-  $footnote->appendChild($footnote->importNode($footnotes, TRUE));
-  $output = str_ireplace(trim($footnote->saveHTML()), '', trim($output));
+  // Cache the result using post meta.
+  add_post_meta($post_id, 'bible_' . $meta_hash, $output);
 
+  // Return the rendered verses.
   return $output;
 }
 
@@ -102,4 +142,5 @@ function biblembed_get_verse_link($atts, $show_version = TRUE, $anchor_text = NU
     $anchor);
 }
 
+// Add the shortcode handler.
 add_shortcode('bible', 'biblembed_shortcode_handler');
