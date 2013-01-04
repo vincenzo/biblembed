@@ -80,7 +80,7 @@ function biblembed_get_verse_quote($atts) {
     // the length of the list of passages.
     if (count($verses) == $passages->length) {
       $atts['verse'] = $verses[$i];
-      $output .= "<br />" . _(biblembed_get_verse_link($atts)) . "</blockquote><hr />" ;
+      $output .= "<br />" . _(biblembed_get_verse_link($atts, true, "Yocl")) . "</blockquote><hr />" ;
     }
     else {
       if ($passages->length - $i == 1) {
@@ -127,19 +127,16 @@ function biblembed_get_verse_quote($atts) {
  *  The link.
  */
 function biblembed_get_verse_link($atts, $show_version = TRUE, $anchor_text = NULL) {
-  if ($anchor_text) {
-    $anchor = $anchor_text;
-  }
-  else {
-    $anchor = $atts['verse'];
-    if ($show_version) {
-      $anchor .= " (" . $atts['version'] . ")";
-    }
+  // If the anchor text for the link has not been specified (default)
+  if (!$anchor_text) {
+    // Create anchor text using the verse and, optionally (TRUE by default), the version of the translation.
+    $anchor_text = $show_version ? $atts['verse'] . " (" . $atts['version'] . ")" : $atts['verse'];
   }
 
+  // Return the link.
   return sprintf('<a href="%s">%s</a>',
     sprintf("http://www.biblegateway.com/passage/?search=%s&version=%s", urlencode($atts['verse']), $atts['version']),
-    $anchor);
+    $anchor_text);
 }
 
 // Add the shortcode handler.
