@@ -66,7 +66,7 @@ function biblembed_get_verse_quote($atts) {
   $passages = $xdoc->query(sprintf("//div[contains(normalize-space(@class), 'passage') and contains(normalize-space(@class), 'version-%s')]", $atts['version']));
 
   // Initialise the output to return.
-  $output = '';
+  $output = "<blockquote>";
   // Multiples verses that are meant to be rendered in a separated way are listed is a semicolon separated string.
   $verses = explode(";", $atts['verse']);
 
@@ -74,7 +74,7 @@ function biblembed_get_verse_quote($atts) {
   for ($i = 0; $i < $passages->length; $i++) {
     $passage = new DOMDocument();
     $passage->appendChild($passage->importNode($passages->item($i), TRUE));
-    $output .= "<blockquote>" . $passage->saveHTML();
+    $output .= $passage->saveHTML();
     // Multiple verses can be rendered as one block. To check whether that's the case,
     // we check the number of verses obtained from a potential semicolon separated list with
     // the length of the list of passages.
