@@ -63,7 +63,10 @@ function biblembed_get_verse_quote($atts) {
 
   // XPath query to find the bible verses we asked for.
   $xdoc = new DOMXPath($doc);
-  $passages = $xdoc->query(sprintf("//div[contains(normalize-space(@class), 'passage') and contains(normalize-space(@class), 'version-%s')]", $atts['version']));
+  $passages = $xdoc->query(sprintf("//div[contains(normalize-space(@class), 'passage') and contains(normalize-space(@class), 'version-%s')]/p", $atts['version']));
+  if ($passages->length === 0) {
+    $passages = $xdoc->query(sprintf("//div[contains(normalize-space(@class), 'passage') and contains(normalize-space(@class), 'version-%s')]/div/p", $atts['version']));
+  }
 
   // Initialise the output to return.
   $output = "<blockquote>";
@@ -80,11 +83,14 @@ function biblembed_get_verse_quote($atts) {
     // the length of the list of passages.
     if (count($verses) == $passages->length) {
       $atts['verse'] = $verses[$i];
-      $output .= "<br />" . _(biblembed_get_verse_link($atts, true, "Yocl")) . "</blockquote><hr />" ;
+      $output .= "<br /><br />" . _(biblembed_get_verse_link($atts, TRUE)) . "</blockquote>";
+      if ($passages->length - $i > 1) {
+        $output .= '<hr /><blockquote>';
+      }
     }
     else {
       if ($passages->length - $i == 1) {
-        $output .= "<br />" . _(biblembed_get_verse_link($atts)) . "</blockquote>";
+        $output .= "<br /><br />" . _(biblembed_get_verse_link($atts)) . "</blockquote>";
       }
     }
   }
@@ -106,6 +112,17 @@ function biblembed_get_verse_quote($atts) {
       $output = str_ireplace(trim($footnote->saveHTML()), '', trim($output));
     }
   }
+
+  // Remove all footnotes.
+  if (($verses = $xdoc->query('//sup[@class="versenum"]')) && ($verses->length > 0)) {
+    for ($i = 0; $i < $verses->length; $i++) {
+      $footnote = new DOMDocument();
+      $footnote->appendChild($footnote->importNode($verses->item($i), TRUE));
+      $output = str_ireplace(trim($footnote->saveHTML()), '', trim($output));
+    }
+  }
+
+  $output = strip_tags($output, '<blockquote><a><br><hr>');
 
   // Cache the result using post meta.
   add_post_meta($post_id, 'bible_' . $meta_hash, $output);
