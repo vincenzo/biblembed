@@ -158,3 +158,4 @@ function biblembed_get_verse_link($atts, $show_version = TRUE, $anchor_text = NU
 
 // Add the shortcode handler.
 add_shortcode('bible', 'biblembed_shortcode_handler');
+add_shortcode('biblelink', 'biblembed_get_verse_link');
