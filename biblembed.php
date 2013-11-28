@@ -158,3 +158,6 @@ function biblembed_get_verse_link($atts, $show_version = TRUE, $anchor_text = NU
 
 // Add the shortcode handler.
 add_shortcode('bible', 'biblembed_shortcode_handler');
+
+// Verse regex.
+// [a-zA-z]+ \d{1,3}(?::\d{1,3})?(?:\s?(?:[-&,]\s?\d+))*
