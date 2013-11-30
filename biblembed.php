@@ -13,6 +13,8 @@
  * You should have received a copy of the GNU General Public License along with this program; if not, write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  ***/
 
+define('BIBLEMBED_DEFAULT_VERSION', 'NR2006');
+
 /**
  *  Handler for parsing the shortcode.
  *
@@ -24,7 +26,7 @@
 function biblembed_shortcode_handler($atts) {
   // Set default values.
   $atts = shortcode_atts(array(
-    'version' => 'NIVUK',
+    'version' => BIBLEMBED_DEFAULT_VERSION,
     'type' => 'quote', // quote or link
     'verse' => 'John 1:1'
   ), $atts);
@@ -156,8 +158,13 @@ function biblembed_get_verse_link($atts, $show_version = TRUE, $anchor_text = NU
     $anchor_text);
 }
 
+function biblembed_verse_to_link($content) {
+  $regex = "/([a-zA-Z]*) (\d{1,3}(?::\s?\d{1,3})?(?:\s?(?:[-&,]\d{1,3}:?\d{0,3}))*)/";
+  $replacement = '<a href="http://www.biblegateway.com/passage/?search=${1}%20${2}&version=' . BIBLEMBED_DEFAULT_VERSION .'>${1} ${2}</a>';
+  $content = preg_replace($regex, $replacement, $content);
+  return $content;
+}
+
 // Add the shortcode handler.
 add_shortcode('bible', 'biblembed_shortcode_handler');
-
-// Verse regex.
-// [a-zA-z]+ \d{1,3}(?::\d{1,3})?(?:\s?(?:[-&,]\s?\d+))*
+add_filter('the_content', 'biblembed_verse_to_link');
