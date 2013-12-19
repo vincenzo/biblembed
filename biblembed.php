@@ -158,13 +158,32 @@ function biblembed_get_verse_link($atts, $show_version = TRUE, $anchor_text = NU
     $anchor_text);
 }
 
+/**
+ * Filter to transform a plain-text verse into a link to BibleGateway.
+ *
+ * @param string $content
+ *  The content to filter.
+ * @return string
+ *  The filtered content.
+ */
 function biblembed_verse_to_link($content) {
-  $regex = "/([a-zA-Z]*) (\d{1,3}(?::\s?\d{1,3})?(?:\s?(?:[-&,]\d{1,3}:?\d{0,3}))*)/";
-  $replacement = '<a href="http://www.biblegateway.com/passage/?search=${1}%20${2}&version=' . BIBLEMBED_DEFAULT_VERSION .'>${1} ${2}</a>';
-  $content = preg_replace($regex, $replacement, $content);
+  $regex = "/(\d{0,1}\s*)(\p{Lu}\w+)\s(\d{1,3}(?::\s?\d{1,3})?(?:\s?(?:[-&,]\d{1,3}:?\d{0,3}))*)(\s{1}\w*)/m";
+  $content = preg_replace_callback(
+    $regex,
+    function ($matches) {
+      if ((int)($matches[1]) < 1) $matches[1] = '';
+      $search = $matches[1] . " " . $matches[2] . " " . $matches[3];
+      $version = strlen($matches[4]) > 1 ? $matches[4] : BIBLEMBED_DEFAULT_VERSION;
+      $replacement = "<a href='http://www.biblegateway.com/passage/?search=%s&version=%s'>%s</a>";
+      return sprintf($replacement, urlencode($search), urlencode($version), $matches[0]);
+    },
+    $content);
   return $content;
 }
 
-// Add the shortcode handler.
+/* Add the shortcode handler. */
 add_shortcode('bible', 'biblembed_shortcode_handler');
+
+/* Add the filter on 'the_content'. */
 add_filter('the_content', 'biblembed_verse_to_link');
+add_filter('the_excerpt', 'biblembed_verse_to_link');
