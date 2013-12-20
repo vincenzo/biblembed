@@ -182,10 +182,9 @@ function biblembed_verse_to_link($content) {
   $content = preg_replace_callback(
     $regex,
     function ($matches) {
-      $lang = get_locale();
       if ((int)($matches[1]) < 1) $matches[1] = '';
-      $search = $matches[1] . " " . $matches[2] . " " . $matches[3];
-      $version = strlen($matches[4]) > 1 ? $matches[4] : biblembed_default_bibles($lang);
+      $search = $matches[1] . $matches[2] . $matches[3];
+      $version = strlen($matches[4]) > 1 ? $matches[4] : biblembed_default_bibles(get_locale());
       $replacement = "<a href='http://www.biblegateway.com/passage/?search=%s&version=%s'>%s</a>";
       return sprintf($replacement, urlencode($search), urlencode($version), $matches[0]);
     },
