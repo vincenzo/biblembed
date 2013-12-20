@@ -13,7 +13,18 @@
  * You should have received a copy of the GNU General Public License along with this program; if not, write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  ***/
 
-define('BIBLEMBED_DEFAULT_VERSION', 'NR2006');
+/**
+ * Default bibles per language.
+ */
+function biblembed_default_bibles($locale = 'und') {
+  $defaults = array(
+    'und' => 'NIV',
+    'en_GB' => 'ESVUK',
+    'en_US' => 'ESV',
+    'it_IT' => 'NR2006',
+  );
+  return $defaults[$locale];
+}
 
 /**
  *  Handler for parsing the shortcode.
@@ -26,7 +37,7 @@ define('BIBLEMBED_DEFAULT_VERSION', 'NR2006');
 function biblembed_shortcode_handler($atts) {
   // Set default values.
   $atts = shortcode_atts(array(
-    'version' => BIBLEMBED_DEFAULT_VERSION,
+    'version' => biblembed_default_bibles(),
     'type' => 'quote', // quote or link
     'verse' => 'John 1:1'
   ), $atts);
@@ -167,13 +178,14 @@ function biblembed_get_verse_link($atts, $show_version = TRUE, $anchor_text = NU
  *  The filtered content.
  */
 function biblembed_verse_to_link($content) {
-  $regex = "/(\d{0,1}\s*)(\p{Lu}\w+)\s(\d{1,3}(?::\s?\d{1,3})?(?:\s?(?:[-&,]\d{1,3}:?\d{0,3}))*)(\s{1}\w*)/m";
+  $regex = "/(\d{0,1}\s*)(\p{Lu}\w+)\s(\d{1,3}(?::\s?\d{1,3})?(?:\s?(?:[-&,]\d{1,3}:?\d{0,3}))*)(\s{0,1}\w*)/m";
   $content = preg_replace_callback(
     $regex,
     function ($matches) {
+      $lang = get_locale();
       if ((int)($matches[1]) < 1) $matches[1] = '';
       $search = $matches[1] . " " . $matches[2] . " " . $matches[3];
-      $version = strlen($matches[4]) > 1 ? $matches[4] : BIBLEMBED_DEFAULT_VERSION;
+      $version = strlen($matches[4]) > 1 ? $matches[4] : biblembed_default_bibles($lang);
       $replacement = "<a href='http://www.biblegateway.com/passage/?search=%s&version=%s'>%s</a>";
       return sprintf($replacement, urlencode($search), urlencode($version), $matches[0]);
     },
