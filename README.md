@@ -9,3 +9,5 @@ BiblEmbed
       * Author: Vincenzo Russo
       * Author URI: http://artetecha.com
       ***/
+
+See it in action here: http://pergrazia.com/statement-of-faith/
